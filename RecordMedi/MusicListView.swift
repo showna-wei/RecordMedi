@@ -23,7 +23,7 @@ struct MusicListView: View {
         case exitInList
     }
     
-    var splayer:SimplePlayer=SimplePlayer()
+    @State var splayer:SimplePlayer=SimplePlayer()
     var body: some View {
         Form{
             Section(header:Text("Inline Choices")){
@@ -37,6 +37,7 @@ struct MusicListView: View {
                             if setting.autoPlayMusic{
                                 if let murl=selection.getMusicURL(){
                                 splayer.startPlay(mURL: murl)
+                                dump(murl)
                                 }
                             }else{
                                 splayer.stopPlay()

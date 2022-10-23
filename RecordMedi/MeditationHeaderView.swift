@@ -12,6 +12,7 @@ struct MeditationHeaderView: View {
     //control progress time view by input variable
     let secondsElapsed:Int
     let secondsRemaining:Int
+    @Binding var rmedi:DailyApp
     
     private var totalSeconds:Int{
         secondsElapsed+secondsRemaining
@@ -31,7 +32,7 @@ struct MeditationHeaderView: View {
     var body: some View {
         VStack{
             //top up time-line
-            ProgressView(value:progress).scaleEffect(x: /*@START_MENU_TOKEN@*/1.0/*@END_MENU_TOKEN@*/, y: 4, anchor: /*@START_MENU_TOKEN@*/.center/*@END_MENU_TOKEN@*/)
+            ProgressView(value:progress).progressViewStyle(LinearProgressViewStyle(tint:rmedi.theme.mainColor)).scaleEffect(x: /*@START_MENU_TOKEN@*/1.0/*@END_MENU_TOKEN@*/, y: 4, anchor: /*@START_MENU_TOKEN@*/.center/*@END_MENU_TOKEN@*/)
                 //custom self theme style
 //                .progressViewStyle(/*@START_MENU_TOKEN@*//*@PLACEHOLDER=Style@*/DefaultProgressViewStyle()/*@END_MENU_TOKEN@*/)
                 .padding(.top, 30.0)
@@ -60,6 +61,6 @@ struct MeditationHeaderView: View {
 
 struct MeditationHeaderView_Previews: PreviewProvider {
     static var previews: some View {
-        MeditationHeaderView(secondsElapsed: 60, secondsRemaining: 300).previewLayout(.sizeThatFits)
+        MeditationHeaderView(secondsElapsed: 60, secondsRemaining: 300,rmedi:.constant(DailyApp.sampleData[0])).previewLayout(.sizeThatFits)
     }
 }

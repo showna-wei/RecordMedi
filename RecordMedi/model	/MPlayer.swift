@@ -14,6 +14,7 @@ class MPlayer:ObservableObject{
     @Published var isAutoCompleted:Bool=false
     private var playMode:MeditationType
     private var musicFilePath:String?
+    private var musicFileLocation:Music.musicLocation?
     //暂时没用
     private var remainingSeconds:Int=0
     
@@ -24,45 +25,70 @@ class MPlayer:ObservableObject{
     private var playerItem:AVPlayerItem?
     private var musicLength:Double=0
     
-    init(playMode:MeditationType=MeditationType.firstLast,musicFilePath:String="",remainingSeconds:Int=0,isMuted:Bool=false) {
+    init(playMode:MeditationType=MeditationType.firstLast,musicFilePath:String="",musicFileLocation:Music.musicLocation=Music.musicLocation.user, remainingSeconds:Int=0,isMuted:Bool=false) {
         
         self.isMuted=isMuted
         self.isAutoCompleted=false
         self.playMode=playMode
-        self.musicFilePath=Bundle.main.path(forResource: musicFilePath, ofType: "")
-        if self.musicFilePath == nil{
-            self.musicURL=nil
+        self.musicFileLocation = musicFileLocation
+        self.musicFilePath=musicFilePath
+        //getRealPath
+        self.musicURL=getMusicURL(musicFilePath: musicFilePath, musicFileLocation: musicFileLocation)
+        if self.musicURL == nil{
             self.playerItem=nil
             self.remainingSeconds=0
             self.musicLength=0
             return
         }
-        self.musicURL=URL(fileURLWithPath: self.musicFilePath!)
+        
         self.playerItem=AVPlayerItem(url: self.musicURL!)
         self.remainingSeconds=remainingSeconds
         self.musicLength=CMTimeGetSeconds(playerItem!.asset.duration)
         //        resetPlayer(playMode:playMode,musicFilePath: musicFilePath, remainingSeconds: remainingSeconds, isMuted: isMuted)
     }
     
+    func getMusicURL(musicFilePath:String,musicFileLocation:Music.musicLocation)->URL?{
+        if musicFileLocation==Music.musicLocation.inapp{
+            let tempath=Bundle.main.path(forResource: musicFilePath, ofType: "")
+            if tempath == nil{
+                return nil
+            }else{
+            return URL(fileURLWithPath: tempath!)
+            }
+        }else{
+            do{
+                return try FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+                    //new data file
+                    .appendingPathComponent(musicFilePath)
+            }catch{
+                return nil
+            }
+            
+        }
+    }
+    
     func getMusicLength()->Double{
         return self.musicLength
     }
     
-    func resetPlayer(playMode:MeditationType=MeditationType.firstLast,musicFilePath:String="",remainingSeconds:Int=0,isMuted:Bool?=nil){
+    func resetPlayer(playMode:MeditationType=MeditationType.firstLast,musicFilePath:String="",musicFileLocation:Music.musicLocation,remainingSeconds:Int=0,isMuted:Bool?=nil){
         
         if isMuted != nil{
             self.isMuted = isMuted!
         }
         self.isAutoCompleted=false
         self.playMode=playMode
-        self.musicFilePath=Bundle.main.path(forResource: musicFilePath, ofType: "")
-        if self.musicFilePath == nil{
-            self.musicURL=nil
+        self.musicFileLocation = musicFileLocation
+        self.musicFilePath=musicFilePath
+        //getRealPath
+        self.musicURL=getMusicURL(musicFilePath: musicFilePath, musicFileLocation: musicFileLocation)
+        if self.musicURL == nil{
             self.playerItem=nil
-            self.player=nil
+            self.remainingSeconds=0
+            self.musicLength=0
             return
         }
-        self.musicURL=URL(fileURLWithPath: self.musicFilePath!)
+        
         self.playerItem=AVPlayerItem(url: self.musicURL!)
         self.remainingSeconds=remainingSeconds
         self.musicLength=CMTimeGetSeconds(playerItem!.asset.duration)

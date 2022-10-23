@@ -17,8 +17,8 @@ struct MeditationView: View {
     @Environment(\.scenePhase) private var scenePhase
     
     @Binding var setting:Setting
-    
-    @State private var rmedi = DailyApp(data:DailyApp.Data())
+    //第一次载入，显示的值，而不是setting的默认值
+    @State private var rmedi :DailyApp
     @Binding var rmedis:[DailyApp]
     //class 和struct的区别在于class内部可以方便的改子变量
     //当meditationTimer的秒数发生变化的时候，这个view中用到的相关值都会更新，包括子视图（重新创建a）
@@ -34,17 +34,30 @@ struct MeditationView: View {
     @State private var triggerItem:AItem?
     
     @State private var isPresentingFinishedView=false
-    @State private var newMeditationData = DailyApp.Data()
+    @State private var newMeditationData :DailyApp.Data
     
     //必须放最后一个，不然传入参数的时候闭包不是最后一个参数，不能简写
-    let saveAction:()->Void
+    var saveAction:()->Void
     
+    init(setting:Binding<Setting>,rmedis:Binding<[DailyApp]>, saveAction:@escaping()->Void={}){
+        self._setting=setting
+        self._rmedis=rmedis
+        var tempr=DailyApp(data:DailyApp.Data())
+        tempr.update(setting:setting.wrappedValue)
+        self._rmedi = State(initialValue: tempr)
+//        dump(self._rmedi)
+//        dump(setting)
+        var tempn=DailyApp.Data()
+        tempn.update(setting:setting.wrappedValue)
+        self._newMeditationData = State(initialValue: tempn)
+        self.saveAction = saveAction
+    }
     
     func resetMeditation(){
 //        print("triggle reset-1:",player.isAutoCompleted==true,meditationTimer.isCompleted==true)
         rmedi.update(from: newMeditationData)
 //        print("triggle reset-2:",player.isAutoCompleted==true,meditationTimer.isCompleted==true)
-        player.resetPlayer(playMode: rmedi.mType, musicFilePath: rmedi.backgroundMusic, remainingSeconds: Int(60*meditationTimer.lengthInMinutes))
+        player.resetPlayer(playMode: rmedi.mType, musicFilePath: rmedi.backgroundMusic,musicFileLocation: rmedi.backgroundMusicLocation, remainingSeconds: Int(60*meditationTimer.lengthInMinutes))
 //        print("triggle reset-3",player.isAutoCompleted==true,meditationTimer.isCompleted==true)
         meditationTimer.reset(lengthInMinutes: rmedi.lengthInMinutes)
 //        print("triggle reset-4:",player.isAutoCompleted==true,meditationTimer.isCompleted==true)
@@ -52,7 +65,7 @@ struct MeditationView: View {
     
     func startMeditation(){
         meditationTimer.reset(lengthInMinutes: rmedi.lengthInMinutes)
-        player.resetPlayer(playMode: rmedi.mType, musicFilePath: rmedi.backgroundMusic, remainingSeconds: Int(60*rmedi.lengthInMinutes))
+        player.resetPlayer(playMode: rmedi.mType, musicFilePath: rmedi.backgroundMusic,musicFileLocation: rmedi.backgroundMusicLocation, remainingSeconds: Int(60*rmedi.lengthInMinutes))
         meditationStatus="Play"
         player.startPlay()
         meditationTimer.startMeditation(lengthInMinutes: rmedi.lengthInMinutes)
@@ -72,8 +85,8 @@ struct MeditationView: View {
         ZStack {
             //add background outline
             RoundedRectangle(cornerRadius:30.0)
-//                .stroke(lineWidth: 3)
-                .fill(rmedi.theme.mainColor)//时间计时到了后，自动保存，不提示，恢复到start的状态
+                .stroke(lineWidth: 3)
+//                .fill(rmedi.theme.mainColor)//时间计时到了后，自动保存，不提示，恢复到start的状态
                 .onReceive(meditationTimer.$isCompleted, perform: { _ in
                     //只执行一次
 //                    print("triggle player-b:",player.isAutoCompleted==true,meditationTimer.isCompleted==true)
@@ -89,10 +102,10 @@ struct MeditationView: View {
                     }
                 })
                 .onAppear(){
-                    newMeditationData.update(setting: setting)
+                    
                 }
             VStack {
-                MeditationHeaderView(secondsElapsed: meditationTimer.secondsElapsed, secondsRemaining: meditationTimer.secondsRemaining)
+                MeditationHeaderView(secondsElapsed: meditationTimer.secondsElapsed, secondsRemaining: meditationTimer.secondsRemaining, rmedi:$rmedi)
                     
                     
                     .alert(isPresented: $isPresentingFinishedView){
@@ -113,7 +126,7 @@ struct MeditationView: View {
                     {
                         ZStack{                            if !player.isMuted{
                                 Image(systemName:
-                                        "speaker.wave.2.circle.fill").scaleEffect(3)
+                                        "speaker.wave.2.circle.fill").foregroundColor(rmedi.theme.mainColor).scaleEffect(3)
                             }
                             else{
                                 Image(systemName:
@@ -125,7 +138,10 @@ struct MeditationView: View {
                 
                 Button(action: /*@START_MENU_TOKEN@*/{}/*@END_MENU_TOKEN@*/, label: {
                     ZStack{
-                        Circle().strokeBorder(lineWidth: 24)
+                        Circle()
+//                            .fill(rmedi.theme.mainColor)
+                            .strokeBorder(Color.gray,lineWidth: 10)
+                            .background(Circle().foregroundColor(rmedi.theme.mainColor))
                         switch meditationStatus{
                         case "Start","End":
                             Text(meditationStatus).font(.largeTitle).fontWeight(.bold).foregroundColor(rmedi.theme.accentColor).scaleEffect(3)
@@ -176,7 +192,7 @@ struct MeditationView: View {
                     default: break
                     }
                 }))
-                .accessibilityLabel("long tap to start or end,short tap to play or stop") .padding(.horizontal, 100)
+                .accessibilityLabel("long tap to start or end,short tap to play or stop") .padding(.horizontal, 80)
                 VStack{
                     switch meditationStatus{
                     case "Start":
@@ -202,15 +218,17 @@ struct MeditationView: View {
                         Text("Short tap to stop or play")
                             .font(.title3)
                     }
-                }
-                .padding(.bottom, 30.0)
+                }.offset(x: 0, y: -40)
             }.padding()
         }.padding()
-        .foregroundColor(rmedi.theme.accentColor)
+//        .foregroundColor(rmedi.theme.accentColor)
         .onAppear(){
             //出现的时候初始化为setting配置的new
             //            newMeditationData.update(setting: setting)
-            rmedi.update(setting: setting)
+            DispatchQueue.main.async{
+                rmedi.update(setting: setting)
+                newMeditationData.update(setting: setting)
+            }
 //            newMeditationData.update(setting: setting)
             //出现就重制计时器
             //            meditationTimer.reset(lengthInMinutes: rmedi.lengthInMinutes)
