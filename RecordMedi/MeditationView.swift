@@ -198,7 +198,7 @@ struct MeditationView: View {
                     case "Start":
                         Text("Short tap to setting and start")
                             .font(.title3)
-                        Text("Long tap to start in default setting")
+                        Text("Long tap to start with default setting")
                             .font(.title3)
                     case "Stop":
                         Text("Short tap to play")
